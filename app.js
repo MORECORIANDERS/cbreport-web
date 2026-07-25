@@ -164,26 +164,38 @@
   }
 
   // ===== 模板：市场概况卡片 =====
-  // 上段:6 个指标分左右两栏(桌面端平分宽度,手机端纵向堆叠)
+  // 上段:6 个指标分左右两栏(手机端也保持横向平分),每栏内标签在上、数值在下、居中对齐
   // 下段:涨跌分布进度条,左红=上涨 / 中灰=平盘 / 右绿=下跌
   // 两端标数字(不写"上涨/下跌"文字),靠位置+颜色+端点数字传达语义
   function marketCardTpl(m) {
+    // 卡片样式:标签在上(小字、ink 色),数值在下(大字、加粗、按业务着色),都居中
+    // value 可以是 { main: '主值', sub: '占比' } 或字符串
     function row(label, value, valueClass) {
+      let mainHTML,
+        subHTML = "";
+      if (typeof value === "object" && value !== null) {
+        mainHTML = esc(value.main);
+        if (value.sub)
+          subHTML = '<div class="text-[11px] text-ink-light mobile:text-[10px]">' + esc(value.sub) + "</div>";
+      } else {
+        mainHTML = esc(value);
+      }
       return (
-        '<div class="flex items-baseline text-[15px] mobile:text-[13px] tiny:text-xs">' +
-        '<span class="whitespace-nowrap text-ink">' +
+        '<div class="flex flex-col items-center text-center">' +
+        '<div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">' +
         label +
-        "</span>" +
-        '<span class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm ' +
+        "</div>" +
+        '<div class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm ' +
         valueClass +
         '">' +
-        value +
-        "</span>" +
+        mainHTML +
+        "</div>" +
+        subHTML +
         "</div>"
       );
     }
     function col(rows) {
-      return '<div class="flex flex-col gap-2 flex-1">' + rows.join("") + "</div>";
+      return '<div class="flex flex-col gap-3 flex-1 mobile:gap-2.5">' + rows.join("") + "</div>";
     }
 
     // 进度条三段宽度按 up/flat/down 占总家数比例分配
@@ -203,15 +215,15 @@
       // 上段:左右两栏指标(手机端也保持左右平分,不堆叠)
       '<div class="flex flex-row gap-4 mobile:gap-2.5">' +
       col([
-        row("总成交额：", esc(m.totalAmount), "text-brand"),
-        row("涨幅前十：", esc(m.top10Gain) + "(" + esc(m.top10GainPct) + ")", "text-brand"),
-        row("涨幅前二十：", esc(m.top20Gain) + "(" + esc(m.top20GainPct) + ")", "text-brand"),
+        row("总成交额", m.totalAmount, "text-brand"),
+        row("涨幅前十", { main: m.top10Gain, sub: m.top10GainPct }, "text-brand"),
+        row("涨幅前二十", { main: m.top20Gain, sub: m.top20GainPct }, "text-brand"),
       ]) +
       col([
-        row("价格中位数：", esc(m.priceMedian), "text-brand"),
+        row("价格中位数", m.priceMedian, "text-brand"),
         // 涨幅中位数:自动着红/绿色,但不加 ▲/▼ 符号(进度条已用颜色传达涨跌)
-        row("涨幅中位数：", esc(m.gainMedian), gainColorClass(m.gainMedian)),
-        row("成交额中位数：", esc(m.amountMedian), "text-brand"),
+        row("涨幅中位数", m.gainMedian, gainColorClass(m.gainMedian)),
+        row("成交额中位数", m.amountMedian, "text-brand"),
       ]) +
       "</div>" +
       // 下段:涨跌分布进度条
