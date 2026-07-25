@@ -2,7 +2,6 @@
   "use strict";
 
   // ===== 列名常量(消除魔法字符串,防止 data.json 改列名时静默失效) =====
-  // 集中定义后,所有判断只引用常量,改名只需改一处
   const COL = {
     RANK: "排名",
     CHANGE: "涨幅",
@@ -62,16 +61,7 @@
     return "text-ink font-bold";
   }
 
-  // 涨跌符号:色盲用户无法仅靠红绿区分涨跌,补 ▲/▼ 让信息不依赖颜色
-  // WCAG 1.4.1 要求"不能仅靠颜色传达信息"
-  function gainSign(val) {
-    const n = parseFloat(String(val).replace("%", ""));
-    if (isNaN(n) || n === 0) return "";
-    return n > 0 ? "▲ " : "▼ ";
-  }
-
   // schema 校验:数据残缺时报错信息对用户友好,而不是把原始 JS 错误抛给用户
-  // 返回 null = 校验通过;返回字符串 = 错误描述
   function validateData(data) {
     if (!data || typeof data !== "object") return "数据格式错误";
     if (!data.tradeDate) return "缺少交易日期";
@@ -87,34 +77,41 @@
     return null;
   }
 
-  // ===== 模板：加载与错误状态 =====
-  function errorTpl(msg) {
-    return (
-      "" +
-      '<div class="text-center py-10">' +
-      '<div class="text-up text-sm mb-3">数据加载失败: ' +
-      esc(msg) +
-      "</div>" +
-      '<button id="retry-btn" type="button" ' +
-      'class="inline-block px-4 py-1.5 rounded border border-brand text-brand text-sm font-bold hover:bg-brand hover:text-white transition-colors">' +
-      "重试" +
-      "</button>" +
-      "</div>"
-    );
+  // 按 "a.b.c" 路径从对象取值
+  // 用于 data-field="market.up" 这类声明式绑定
+  function getByPath(obj, path) {
+    return path.split(".").reduce(function (acc, key) {
+      return acc == null ? undefined : acc[key];
+    }, obj);
   }
 
-  // 绑定重试按钮:渲染 errorTpl 后必须调用一次
-  function bindRetry() {
-    const btn = document.getElementById("retry-btn");
-    if (btn) btn.addEventListener("click", loadData);
+  // ===== 静态部分填值:遍历所有 [data-field] 元素,按路径取值填进去 =====
+  // 这是"声明式绑定"的核心:HTML 写 data-field="market.up",JS 自动找到 data.market.up 填值
+  // 用 textContent 而非 innerHTML,浏览器自动转义,防 XSS
+  function fillStaticFields(data) {
+    const els = document.querySelectorAll("#real-content [data-field]");
+    els.forEach(function (el) {
+      const path = el.getAttribute("data-field");
+      const val = getByPath(data, path);
+      el.textContent = val == null ? "" : String(val);
+
+      // 涨幅中位数这类需要按正负切换颜色类
+      if (el.getAttribute("data-color-by-sign") === "true") {
+        // 清掉可能存在的旧颜色类,再按当前值加新的
+        el.classList.remove("text-up", "text-down", "text-ink", "font-bold");
+        const cls = gainColorClass(val);
+        cls.split(/\s+/).forEach(function (c) {
+          if (c) el.classList.add(c);
+        });
+      }
+    });
   }
 
-  // ===== 模板：新鲜度标签 =====
-  // 用北京时间(UTC+8)计算日期差,避免海外用户本地时区导致标签错位
-  function freshnessTpl(tradeDate) {
-    // 把任意 Date 折算成"北京时间当天的 00:00"对应的 UTC 毫秒数
+  // ===== freshness 彩色标签:颜色 + 文案都按 dayDiff 动态变化,必须 JS 生成 =====
+  function renderFreshness(tradeDate) {
+    // 用北京时间(UTC+8)计算日期差,避免海外用户本地时区导致标签错位
     function toBJMidnight(date) {
-      const bjOffset = 8 * 3600 * 1000; // 北京比 UTC 快 8 小时
+      const bjOffset = 8 * 3600 * 1000;
       return Math.floor((date.getTime() + bjOffset) / 86400000) * 86400000;
     }
     const nowBJ = toBJMidnight(new Date());
@@ -123,7 +120,6 @@
 
     let label, cls;
     if (dayDiff < 0) {
-      // 数据日期比今天还晚(云函数时区错位或预告数据),用中性灰提示
       label = "未来数据";
       cls = "bg-[#e2e3e5] text-[#383d41]";
     } else if (dayDiff === 0) {
@@ -139,66 +135,16 @@
       label = dayDiff + "日前数据";
       cls = "bg-[#f8d7da] text-[#721c24]";
     }
-    return '<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ' + cls + '">' + label + "</span>";
+    // 用 innerHTML 是因为要插入带 class 的 span;label 内容是固定枚举,不存在注入风险
+    const el = document.getElementById("freshness");
+    if (el) {
+      el.innerHTML =
+        '<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ' + cls + '">' + label + "</span>";
+    }
   }
 
-  // ===== 模板：页头 =====
-  function headerTpl(data) {
-    return (
-      "" +
-      '<header class="text-center mb-6 mobile:mb-4">' +
-      '<h1 class="font-script italic font-bold text-brand text-[34px] mobile:text-[21px] tiny:text-[19px]">Study Convertible Bond Everyday</h1>' +
-      '<div class="w-20 h-0.5 bg-brand mx-auto mt-2 mb-1 mobile:w-[60px] mobile:mt-1.5"></div>' +
-      '<div class="flex items-center justify-center gap-2 flex-wrap mt-1 text-sm text-ink-medium mobile:text-xs mobile:gap-1.5">' +
-      freshnessTpl(data.tradeDate) +
-      "<span>数据日期: " +
-      esc(data.tradeDate) +
-      "</span>" +
-      '<span class="text-xs text-ink-light mobile:text-[11px]">| 页面更新: ' +
-      esc(data.generateTime) +
-      "</span>" +
-      "</div>" +
-      '<div class="text-[11px] text-ink-light mt-1 mobile:text-[10px] mobile:mt-[3px]">下次自动更新: 工作日 15:15 (北京时间) | 由 CloudBase 云函数自动生成</div>' +
-      "</header>"
-    );
-  }
-
-  // ===== 模板：市场概况卡片 =====
-  // 上段:6 个指标分左右两栏(手机端也保持横向平分),每栏内标签在上、数值在下、居中对齐
-  // 下段:涨跌分布进度条,左红=上涨 / 中灰=平盘 / 右绿=下跌
-  // 两端标数字(不写"上涨/下跌"文字),靠位置+颜色+端点数字传达语义
-  function marketCardTpl(m) {
-    // 卡片样式:标签在上(小字、ink 色),数值在下(大字、加粗、按业务着色),都居中
-    // value 可以是 { main: '主值', sub: '占比' } 或字符串
-    function row(label, value, valueClass) {
-      let mainHTML,
-        subHTML = "";
-      if (typeof value === "object" && value !== null) {
-        mainHTML = esc(value.main);
-        if (value.sub)
-          subHTML = '<div class="text-[11px] text-ink-light mobile:text-[10px]">' + esc(value.sub) + "</div>";
-      } else {
-        mainHTML = esc(value);
-      }
-      return (
-        '<div class="flex flex-col items-center text-center">' +
-        '<div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">' +
-        label +
-        "</div>" +
-        '<div class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm ' +
-        valueClass +
-        '">' +
-        mainHTML +
-        "</div>" +
-        subHTML +
-        "</div>"
-      );
-    }
-    function col(rows) {
-      return '<div class="flex flex-col gap-3 flex-1 mobile:gap-2.5">' + rows.join("") + "</div>";
-    }
-
-    // 进度条三段宽度按 up/flat/down 占总家数比例分配
+  // ===== 市场卡片进度条:三段宽度按 up/flat/down 占比算 =====
+  function renderMarketBar(m) {
     const upNum = parseFloat(m.up) || 0;
     const downNum = parseFloat(m.down) || 0;
     const flatNum = parseFloat(m.flat) || 0;
@@ -206,55 +152,37 @@
     const upPct = (upNum / total) * 100;
     const flatPct = (flatNum / total) * 100;
     const downPct = (downNum / total) * 100;
-    // 视觉上不写文字,但 a11y 必须有描述给屏幕阅读器
-    const barAriaLabel = "上涨 " + upNum + " 家,平盘 " + flatNum + " 家,下跌 " + downNum + " 家";
 
+    const bar = document.getElementById("market-bar");
+    if (!bar) return;
+
+    // aria-label 给屏幕阅读器念出来(视觉上不写文字)
+    bar.setAttribute("aria-label", "上涨 " + upNum + " 家,平盘 " + flatNum + " 家,下跌 " + downNum + " 家");
+
+    bar.querySelector('[data-bar="up"]').style.width = upPct.toFixed(2) + "%";
+    bar.querySelector('[data-bar="flat"]').style.width = flatPct.toFixed(2) + "%";
+    bar.querySelector('[data-bar="down"]').style.width = downPct.toFixed(2) + "%";
+  }
+
+  // ===== 表格模块标题条(对应原 moduleTpl 的标题部分) =====
+  // 表格内容用 tableTpl 生成字符串后 innerHTML 填进去(因为 table 行列数每天变,必须动态生成)
+  function moduleSectionHTML(title, subtitle, tableHTML) {
     return (
-      "" +
-      '<div class="bg-white border border-surface-border rounded-lg p-4 mobile:p-3">' +
-      // 上段:左右两栏指标(手机端也保持左右平分,不堆叠)
-      '<div class="flex flex-row gap-4 mobile:gap-2.5">' +
-      col([
-        row("总成交额", m.totalAmount, "text-brand"),
-        row("涨幅前十", { main: m.top10Gain, sub: m.top10GainPct }, "text-brand"),
-        row("涨幅前二十", { main: m.top20Gain, sub: m.top20GainPct }, "text-brand"),
-      ]) +
-      col([
-        row("价格中位数", m.priceMedian, "text-brand"),
-        // 涨幅中位数:自动着红/绿色,但不加 ▲/▼ 符号(进度条已用颜色传达涨跌)
-        row("涨幅中位数", m.gainMedian, gainColorClass(m.gainMedian)),
-        row("成交额中位数", m.amountMedian, "text-brand"),
-      ]) +
+      '<section class="mb-6 mobile:mb-4">' +
+      '<div class="flex items-center justify-between h-9 mb-1.5 mobile:min-h-[30px] mobile:mb-1 mobile:flex-wrap mobile:gap-1">' +
+      '<h2 class="flex items-center gap-2.5 text-xl font-bold text-ink mobile:text-base mobile:gap-1.5">' +
+      '<span class="inline-block w-1 h-7 rounded-sm bg-brand mobile:h-[22px]"></span>' +
+      esc(title) +
+      "</h2>" +
+      (subtitle ? '<span class="text-sm text-ink-medium mobile:text-[11px]">' + esc(subtitle) + "</span>" : "") +
       "</div>" +
-      // 下段:涨跌分布进度条
-      '<div class="mt-4 mobile:mt-3 flex items-center gap-2">' +
-      '<span class="font-mono font-bold text-[15px] text-up mobile:text-[13px]">' +
-      esc(m.up) +
-      "</span>" +
-      '<div class="flex-1 flex h-2 rounded overflow-hidden bg-surface-alt" role="img" aria-label="' +
-      esc(barAriaLabel) +
-      '">' +
-      '<div class="bg-up" style="width:' +
-      upPct.toFixed(2) +
-      '%"></div>' +
-      '<div class="bg-surface-separator" style="width:' +
-      flatPct.toFixed(2) +
-      '%"></div>' +
-      '<div class="bg-down" style="width:' +
-      downPct.toFixed(2) +
-      '%"></div>' +
-      "</div>" +
-      '<span class="font-mono font-bold text-[15px] text-down mobile:text-[13px]">' +
-      esc(m.down) +
-      "</span>" +
-      "</div>" +
-      "</div>"
+      tableHTML +
+      "</section>"
     );
   }
 
-  // ===== 模板：表格 =====
-  // caption:表格的可访问标题,渲染成 sr-only <caption>,屏幕阅读器会念出来
-  function tableTpl(tableData, colWidths, stickyCount, caption) {
+  // ===== 表格 HTML 生成(行列数每天变,必须动态生成) =====
+  function tableHTML(tableData, colWidths, stickyCount, caption) {
     stickyCount = stickyCount || 1;
     const colLabels = tableData.colLabels;
     const rows = tableData.rows;
@@ -276,7 +204,7 @@
       maxBarValues[idx] = maxVal || 1;
     });
 
-    // 冻结列固定宽度（仅"排名"列固定 36px）
+    // 冻结列固定宽度(仅"排名"列固定 36px)
     const frozenWidths = [];
     for (let i = 0; i < stickyCount; i++) {
       frozenWidths.push((colLabels[i] || "") === COL.RANK ? 36 : 0);
@@ -288,7 +216,7 @@
       acc += frozenWidths[i];
     }
 
-    // 表头(scope="col" 让屏幕阅读器明确这是列头,可朗读列名给每个单元格)
+    // 表头(scope="col" 让屏幕阅读器明确这是列头)
     const headCells = colLabels
       .map(function (label, i) {
         const isSticky = i < stickyCount;
@@ -328,7 +256,7 @@
             const isCenter = !isNumeric || CENTER_COLS.indexOf(colName) >= 0;
             const alignClass = isCenter ? "text-center" : "text-left pl-2";
 
-            // 颜色：涨幅列红涨绿跌；"涨幅中位数"列除外（保持中性）
+            // 颜色:涨幅列红涨绿跌;"涨幅中位数"列除外(保持中性)
             let colorClass = "text-ink";
             const isChangeCol = c === changePctCol || colName === COL.CHANGE;
             if (isChangeCol) {
@@ -339,16 +267,18 @@
             }
 
             // 涨跌符号:仅给"涨幅"列加(让色盲用户也能区分涨跌)
-            // "涨幅中位数"列不加,因为它是中性参考列
             let displayVal = val;
             if (isChangeCol && val !== "-" && val !== "") {
-              displayVal = gainSign(val) + val;
+              const n = parseFloat(String(val).replace("%", ""));
+              if (!isNaN(n) && n !== 0) {
+                displayVal = (n > 0 ? "▲ " : "▼ ") + val;
+              }
             }
 
             const isMono = isNumeric || /^[\d.%-]+$/.test(val.trim());
             const monoClass = isMono ? "font-mono" : "";
 
-            // sticky 列：需要带背景色以遮盖滚动内容
+            // sticky 列:需要带背景色以遮盖滚动内容
             let stickyClass = "";
             let stickyStyle = "";
             if (c < stickyCount) {
@@ -409,11 +339,10 @@
       })
       .join("");
 
-    // sr-only caption:屏幕阅读器念出表格标题,视觉隐藏不影响布局
+    // sr-only caption:屏幕阅读器念出表格标题
     const captionHtml = caption ? '<caption class="sr-only">' + esc(caption) + "</caption>" : "";
 
     return (
-      "" +
       '<div class="table-wrapper">' +
       '<table class="w-full text-[13px] mobile:text-[11px] mobile:min-w-[480px] border-collapse">' +
       captionHtml +
@@ -428,25 +357,8 @@
     );
   }
 
-  // ===== 模板：模块容器 =====
-  function moduleTpl(title, subtitle, content) {
-    return (
-      "" +
-      '<section class="mb-6 mobile:mb-4">' +
-      '<div class="flex items-center justify-between h-9 mb-1.5 mobile:min-h-[30px] mobile:mb-1 mobile:flex-wrap mobile:gap-1">' +
-      '<h2 class="flex items-center gap-2.5 text-xl font-bold text-ink mobile:text-base mobile:gap-1.5">' +
-      '<span class="inline-block w-1 h-7 rounded-sm bg-brand mobile:h-[22px]"></span>' +
-      esc(title) +
-      "</h2>" +
-      (subtitle ? '<span class="text-sm text-ink-medium mobile:text-[11px]">' + esc(subtitle) + "</span>" : "") +
-      "</div>" +
-      content +
-      "</section>"
-    );
-  }
-
-  // ===== 主渲染 =====
-  function renderPage(data) {
+  // ===== 5 个表格模块:标题/副标题写死在配置里,表格 HTML 动态生成 =====
+  function renderTables(data) {
     const distColWidths = [0.18, 0.1, 0.08, 0.08, 0.16, 0.2, 0.2];
     const top10ColWidths = [0.05, 0.12, 0.08, 0.1, 0.14, 0.13, 0.13, 0.13, 0.12];
 
@@ -476,28 +388,59 @@
       },
     ];
 
-    const tablesHtml = tableConfigs
+    const html = tableConfigs
       .map(function (cfg) {
-        return moduleTpl(cfg.title, cfg.subtitle, tableTpl(cfg.data, cfg.widths, cfg.sticky, cfg.title));
+        return moduleSectionHTML(cfg.title, cfg.subtitle, tableHTML(cfg.data, cfg.widths, cfg.sticky, cfg.title));
       })
       .join("");
 
-    return (
-      "" +
-      headerTpl(data) +
-      moduleTpl("市场概况", null, marketCardTpl(data.market)) +
-      tablesHtml +
-      '<footer class="text-center mt-5 text-[11px] text-brand mobile:text-[10px] mobile:mt-3.5">免责声明：本图表来自公开数据源 仅整理供学习研究 不作为投资建议</footer>' +
-      '<div class="text-center mt-2 text-xs text-ink-light mobile:text-[10px]">共 ' +
-      esc(data.bondCount) +
-      " 只可转债 | 数据自动更新中</div>"
-    );
+    const root = document.getElementById("tables-root");
+    if (root) root.innerHTML = html;
   }
 
-  // ===== 入口：加载数据 =====
-  // 8 秒超时,避免服务器挂起导致永久 loading
+  // ===== 错误态:从 <template> 克隆,填错误信息,绑定重试 =====
+  function showError(msg) {
+    const tpl = document.getElementById("tpl-error");
+    if (!tpl) return;
+    const frag = tpl.content.cloneNode(true);
+    const msgEl = frag.querySelector("[data-error-msg]");
+    if (msgEl) msgEl.textContent = String(msg || "未知错误"); // textContent 自动转义
+
+    // 把 #app(骨架屏)替换成错误态
+    const appEl = document.getElementById("app");
+    if (appEl) {
+      appEl.innerHTML = "";
+      appEl.appendChild(frag);
+      appEl.setAttribute("aria-busy", "false");
+    }
+
+    // 绑定重试按钮
+    const btn = document.getElementById("retry-btn");
+    if (btn) btn.addEventListener("click", loadData);
+  }
+
+  // ===== 主渲染:静态部分填值 + 动态部分生成 =====
+  function renderPage(data) {
+    // 静态部分:页头日期、市场卡片 6 个指标 + 进度条数字、底部 bondCount
+    fillStaticFields(data);
+    renderFreshness(data.tradeDate);
+    renderMarketBar(data.market);
+
+    // 动态部分:5 个表格(行列数每天变,必须 JS 生成)
+    renderTables(data);
+
+    // 切换显示:隐藏骨架屏,显示真实内容
+    const appEl = document.getElementById("app");
+    const realEl = document.getElementById("real-content");
+    if (appEl) {
+      appEl.innerHTML = ""; // 清空骨架屏
+      appEl.setAttribute("aria-busy", "false");
+    }
+    if (realEl) realEl.hidden = false;
+  }
+
+  // ===== 入口:加载数据 =====
   const FETCH_TIMEOUT_MS = 8000;
-  // 模块级 controller 引用,允许下一次 loadData 时取消上一次未完成的请求
   let currentAbortController = null;
 
   function loadData() {
@@ -519,7 +462,6 @@
       }
     }, FETCH_TIMEOUT_MS);
 
-    const appEl = document.getElementById("app");
     const url = "data.json?t=" + Date.now();
     fetch(url, { signal: controller.signal })
       .then(function (res) {
@@ -529,33 +471,25 @@
       .then(function (data) {
         clearTimeout(timer);
         currentAbortController = null;
-        // schema 校验:数据残缺时给用户友好提示,不抛原始 JS 错误
-        const validationError = validateData(data);
-        if (validationError) {
-          appEl.setAttribute("aria-busy", "false");
-          appEl.innerHTML = errorTpl("数据格式异常: " + validationError);
-          bindRetry();
+        const err = validateData(data);
+        if (err) {
+          showError(err);
           return;
         }
-        appEl.setAttribute("aria-busy", "false");
-        document.title = "可转债日报 - " + data.tradeDate;
-        appEl.innerHTML = renderPage(data);
+        renderPage(data);
       })
       .catch(function (err) {
         clearTimeout(timer);
         currentAbortController = null;
-        appEl.setAttribute("aria-busy", "false");
-        // AbortError 是我们自己触发的超时,给用户更友好的提示
-        const msg =
-          err && err.name === "AbortError"
-            ? "请求超时,请检查网络后重试"
-            : err && err.message
-              ? err.message
-              : "未知错误";
-        appEl.innerHTML = errorTpl(msg);
-        bindRetry();
+        // AbortController 触发的 abort 会进来,给个友好提示
+        if (err && err.name === "AbortError") {
+          showError("请求超时,请稍后重试");
+        } else {
+          showError(err && err.message ? err.message : String(err));
+        }
       });
   }
 
-  loadData();
+  // ===== 启动 =====
+  document.addEventListener("DOMContentLoaded", loadData);
 })();
