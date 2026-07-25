@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+/* ============================================
+   可转债日报 - 主题配置 (Tailwind v4 @theme)
+   v4 把所有设计 token 写在 CSS 里,不再需要 tailwind.config.js
+   命名规则:--color-{name} / --font-{name} / --max-width-{name} 等
+   定义后自动生成对应工具类:text-{name} / bg-{name} / font-{name} / max-w-{name}
+   ============================================ */
+@theme {
+  /* 品牌主色：紫色（带 50~900 色阶） */
+  --color-brand-50: #F5F0FD;
+  --color-brand-100: #EBE0FB;
+  --color-brand-200: #D6BDF7;
+  --color-brand-300: #BD9BF3;
+  --color-brand-400: #A878EE;
+  --color-brand-500: #8250DF;
+  --color-brand-600: #6E3FC4;
+  --color-brand-700: #5A30A8;
+  --color-brand-800: #472485;
+  --color-brand-900: #341A62;
+  /* 不带数字时直接 text-brand / bg-brand → 用 500 */
+  --color-brand: var(--color-brand-500);
+
+  /* 涨跌色（A股惯例：红涨绿跌） */
+  --color-up: #FF4757;
+  --color-down: #2ED573;
+  --color-gold: #FDCB6E;
+
+  /* 文本层级 */
+  --color-ink: #2D3436;
+  --color-ink-medium: #636E72;
+  --color-ink-light: #B2BEC3;
+
+  /* 卡片 / 边框 / 分隔线 / 页面背景 */
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F8F9FA;
+  --color-surface-border: #E8E8E8;
+  --color-surface-separator: #E0E0E0;
+  --color-surface-page: #F1F2F6;
+
+  /* 字体栈 */
+  --font-sans: "Noto Sans CJK SC", "PingFang SC", "WenQuanYi Micro Hei", "Microsoft YaHei", sans-serif;
+  --font-mono: "DejaVu Sans Mono", "Consolas", monospace;
+  --font-script: "Segoe Script", "Palatino Linotype", Georgia, serif;
+
+  /* 最大宽度容器 */
+  --max-width-report: 750px;
+}
+
+/* max-width 断点：v4 用 @custom-variant 定义
+   v4 默认断点是 min-width 移动优先,本项目沿用原 CSS 的 max-width 桌面优先写法 */
+@custom-variant mobile (@media (max-width: 600px));
+@custom-variant tiny (@media (max-width: 380px));
+
+/* ============================================
+   组件层样式
+   仅放置 Tailwind 工具类难以直接表达的复杂场景
+   ============================================ */
+@layer components {
+  /* 表格容器：圆角 + 水平滚动 + 隐藏滚动条 */
+  .table-wrapper {
+    @apply bg-white border border-surface-border rounded-lg overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .table-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+  /* 最后一行去掉底边线，避免与容器边框重叠 */
+  .table-wrapper tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* 数值条形图（涨幅中位数、成交额等可视化条） */
+  .bar-track {
+    @apply absolute bottom-0.5 left-1 right-1 h-1 bg-white rounded-sm overflow-hidden;
+  }
+  .bar-track-bidi {
+    @apply absolute bottom-0.5 left-1 right-1 h-1 bg-white rounded-sm overflow-hidden flex justify-center;
+  }
+  .bar-fill {
+    @apply h-full rounded-sm;
+  }
+  .bar-right {
+    @apply h-full absolute left-1/2 rounded-r-sm;
+  }
+  .bar-left {
+    @apply h-full absolute right-1/2 rounded-l-sm;
+  }
+}

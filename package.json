@@ -1,14 +1,15 @@
 {
   "name": "cbreport-web",
   "version": "1.0.0",
-  "description": "可转债日报 Web 版 - Tailwind CSS 重构",
+  "description": "可转债日报 Web 版 - Tailwind CSS v4 重构",
   "private": true,
   "scripts": {
-    "build": "tailwindcss -i ./src/input.css -o ./styles.css --minify",
-    "dev": "tailwindcss -i ./src/input.css -o ./styles.css --watch",
+    "build": "tailwindcss -i ./src/app.css -o ./styles.css --minify",
+    "dev": "tailwindcss -i ./src/app.css -o ./styles.css --watch",
     "serve": "python3 -m http.server 8000"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.17"
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
   }
 }
