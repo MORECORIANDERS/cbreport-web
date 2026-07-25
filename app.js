@@ -164,6 +164,9 @@
   }
 
   // ===== 模板：市场概况卡片 =====
+  // 上段:6 个指标分左右两栏(桌面端平分宽度,手机端纵向堆叠)
+  // 下段:涨跌分布进度条,左红=上涨 / 中灰=平盘 / 右绿=下跌
+  // 两端标数字(不写"上涨/下跌"文字),靠位置+颜色+端点数字传达语义
   function marketCardTpl(m) {
     function row(label, value, valueClass) {
       return (
@@ -180,16 +183,25 @@
       );
     }
     function col(rows) {
-      return '<div class="flex flex-col gap-2">' + rows.join("") + "</div>";
+      return '<div class="flex flex-col gap-2 sm:flex-1">' + rows.join("") + "</div>";
     }
+
+    // 进度条三段宽度按 up/flat/down 占总家数比例分配
+    const upNum = parseFloat(m.up) || 0;
+    const downNum = parseFloat(m.down) || 0;
+    const flatNum = parseFloat(m.flat) || 0;
+    const total = upNum + downNum + flatNum || 1; // 防 0 除
+    const upPct = (upNum / total) * 100;
+    const flatPct = (flatNum / total) * 100;
+    const downPct = (downNum / total) * 100;
+    // 视觉上不写文字,但 a11y 必须有描述给屏幕阅读器
+    const barAriaLabel = "上涨 " + upNum + " 家,平盘 " + flatNum + " 家,下跌 " + downNum + " 家";
+
     return (
       "" +
-      '<div class="bg-white border border-surface-border rounded-lg p-4 flex flex-col sm:flex-row sm:justify-between gap-4 mobile:p-3 mobile:gap-2.5">' +
-      col([
-        row("上涨：", esc(m.up), "text-up"),
-        row("下跌：", esc(m.down), "text-down"),
-        row("平盘：", esc(m.flat), "text-ink"),
-      ]) +
+      '<div class="bg-white border border-surface-border rounded-lg p-4 mobile:p-3">' +
+      // 上段:左右两栏指标
+      '<div class="flex flex-col sm:flex-row gap-4 mobile:gap-2.5">' +
       col([
         row("总成交额：", esc(m.totalAmount), "text-brand"),
         row("涨幅前十：", esc(m.top10Gain) + "(" + esc(m.top10GainPct) + ")", "text-brand"),
@@ -197,9 +209,33 @@
       ]) +
       col([
         row("价格中位数：", esc(m.priceMedian), "text-brand"),
+        // 涨幅中位数:自动着红/绿色,但不加 ▲/▼ 符号(进度条已用颜色传达涨跌)
         row("涨幅中位数：", esc(m.gainMedian), gainColorClass(m.gainMedian)),
         row("成交额中位数：", esc(m.amountMedian), "text-brand"),
       ]) +
+      "</div>" +
+      // 下段:涨跌分布进度条
+      '<div class="mt-4 mobile:mt-3 flex items-center gap-2">' +
+      '<span class="font-mono font-bold text-[15px] text-up mobile:text-[13px]">' +
+      esc(m.up) +
+      "</span>" +
+      '<div class="flex-1 flex h-2 rounded overflow-hidden bg-surface-alt" role="img" aria-label="' +
+      esc(barAriaLabel) +
+      '">' +
+      '<div class="bg-up" style="width:' +
+      upPct.toFixed(2) +
+      '%"></div>' +
+      '<div class="bg-surface-separator" style="width:' +
+      flatPct.toFixed(2) +
+      '%"></div>' +
+      '<div class="bg-down" style="width:' +
+      downPct.toFixed(2) +
+      '%"></div>' +
+      "</div>" +
+      '<span class="font-mono font-bold text-[15px] text-down mobile:text-[13px]">' +
+      esc(m.down) +
+      "</span>" +
+      "</div>" +
       "</div>"
     );
   }
