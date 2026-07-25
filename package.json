@@ -3,13 +3,23 @@
   "version": "1.0.0",
   "description": "可转债日报 Web 版 - Tailwind CSS v4 重构",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tailwindcss -i ./src/app.css -o ./styles.css --minify",
     "dev": "tailwindcss -i ./src/app.css -o ./styles.css --watch",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "lint": "eslint app.js",
+    "lint:fix": "eslint app.js --fix",
+    "format": "prettier --write app.js index.html src/app.css",
+    "format:check": "prettier --check app.js index.html src/app.css"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
     "tailwindcss": "^4.3.3"
   }
 }

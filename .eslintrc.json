@@ -1,0 +1,29 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "extends": [
+    "eslint:recommended",
+    "prettier"
+  ],
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-console": "warn",
+    "no-undef": "error",
+    "prefer-const": ["warn", { "destructuring": "any", "ignoreReadBeforeAssign": true }],
+    "no-var": "warn",
+    "eqeqeq": ["warn", "smart"]
+  },
+  "globals": {
+    "AbortController": "readonly",
+    "fetch": "readonly",
+    "document": "readonly",
+    "window": "readonly"
+  }
+}

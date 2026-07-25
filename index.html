@@ -1,17 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>可转债日报</title>
-<link rel="stylesheet" href="styles.css">
-<script src="app.js" defer></script>
-</head>
-<body class="bg-surface-page text-ink font-sans antialiased leading-relaxed">
-<div class="mx-auto max-w-report px-6 pt-[30px] pb-[60px] mobile:px-2.5 mobile:pt-3.5 mobile:pb-8 tiny:px-2 tiny:pt-2.5 tiny:pb-7">
-  <div id="app">
-    <div class="text-center py-16 text-ink-light text-base">正在加载数据...</div>
-  </div>
-</div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>可转债日报</title>
+    <meta
+      name="description"
+      content="每日可转债市场数据日报 - 价格分布、行业分布、涨跌TOP10。仅作学习研究,不作为投资建议。"
+    />
+    <meta name="theme-color" content="#8250DF" />
+    <meta name="color-scheme" content="light" />
+    <!-- CSP:内容安全策略,即使未来引入第三方脚本或被 XSS,也能限制资源加载范围
+     default-src 'self'   默认只允许同源
+     script-src 'self'    JS 只能来自本站(禁止内联 + 外链)
+     style-src  'self' 'unsafe-inline'  CSS 同源,Tailwind 工具类允许内联 style 属性
+     img-src    'self' data:  图片同源 + data URI
+     connect-src 'self'  fetch/XHR 只能请求本站(防止数据外泄) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body class="bg-surface-page text-ink font-sans antialiased leading-relaxed">
+    <div
+      class="mx-auto max-w-report px-6 pt-[30px] pb-[60px] mobile:px-2.5 mobile:pt-3.5 mobile:pb-8 tiny:px-2 tiny:pt-2.5 tiny:pb-7"
+    >
+      <div id="app" aria-live="polite" aria-busy="true">
+        <!-- 加载态骨架屏:替代原"正在加载数据..."纯文本
+         灰色块占位 + 呼吸扫光动画,让用户感觉"系统在工作"
+         结构尽量贴近真实页面:页头 + 市场卡片 + 几个表格模块 -->
+        <header class="text-center mb-6">
+          <div class="skeleton-block h-9 w-3/4 mx-auto mobile:h-6"></div>
+          <div class="skeleton-block h-3 w-1/2 mx-auto mt-2 mobile:h-2.5"></div>
+          <div class="skeleton-block h-2.5 w-2/3 mx-auto mt-1.5 mobile:h-2"></div>
+        </header>
+        <section class="mb-6">
+          <div class="skeleton-block h-9 w-full mb-1.5"></div>
+          <div class="skeleton-block h-28 w-full"></div>
+        </section>
+        <section class="mb-6">
+          <div class="skeleton-block h-9 w-full mb-1.5"></div>
+          <div class="skeleton-block h-60 w-full"></div>
+        </section>
+        <section class="mb-6">
+          <div class="skeleton-block h-9 w-full mb-1.5"></div>
+          <div class="skeleton-block h-60 w-full"></div>
+        </section>
+      </div>
+    </div>
+  </body>
 </html>

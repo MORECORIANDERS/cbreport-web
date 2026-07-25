@@ -8,35 +8,37 @@
    ============================================ */
 @theme {
   /* 品牌主色：紫色（带 50~900 色阶） */
-  --color-brand-50: #F5F0FD;
-  --color-brand-100: #EBE0FB;
-  --color-brand-200: #D6BDF7;
-  --color-brand-300: #BD9BF3;
-  --color-brand-400: #A878EE;
-  --color-brand-500: #8250DF;
-  --color-brand-600: #6E3FC4;
-  --color-brand-700: #5A30A8;
+  --color-brand-50: #f5f0fd;
+  --color-brand-100: #ebe0fb;
+  --color-brand-200: #d6bdf7;
+  --color-brand-300: #bd9bf3;
+  --color-brand-400: #a878ee;
+  --color-brand-500: #8250df;
+  --color-brand-600: #6e3fc4;
+  --color-brand-700: #5a30a8;
   --color-brand-800: #472485;
-  --color-brand-900: #341A62;
+  --color-brand-900: #341a62;
   /* 不带数字时直接 text-brand / bg-brand → 用 500 */
   --color-brand: var(--color-brand-500);
 
   /* 涨跌色（A股惯例：红涨绿跌） */
-  --color-up: #FF4757;
-  --color-down: #2ED573;
-  --color-gold: #FDCB6E;
+  --color-up: #ff4757;
+  --color-down: #2ed573;
+  --color-gold: #fdcb6e;
 
-  /* 文本层级 */
-  --color-ink: #2D3436;
-  --color-ink-medium: #636E72;
-  --color-ink-light: #B2BEC3;
+  /* 文本层级
+     ink-light 原 #B2BEC3 在浅灰背景上对比度仅 1.7:1,远低于 WCAG AA 4.5:1
+     调深到 #636E72 量级 → 实际用更深的 #5A6C75 (对比度约 5.0:1) */
+  --color-ink: #2d3436;
+  --color-ink-medium: #5a6c75;
+  --color-ink-light: #7f8c8d;
 
   /* 卡片 / 边框 / 分隔线 / 页面背景 */
-  --color-surface: #FFFFFF;
-  --color-surface-alt: #F8F9FA;
-  --color-surface-border: #E8E8E8;
-  --color-surface-separator: #E0E0E0;
-  --color-surface-page: #F1F2F6;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8f9fa;
+  --color-surface-border: #e8e8e8;
+  --color-surface-separator: #e0e0e0;
+  --color-surface-page: #f1f2f6;
 
   /* 字体栈 */
   --font-sans: "Noto Sans CJK SC", "PingFang SC", "WenQuanYi Micro Hei", "Microsoft YaHei", sans-serif;
@@ -87,5 +89,38 @@
   }
   .bar-left {
     @apply h-full absolute right-1/2 rounded-l-sm;
+  }
+
+  /* 加载态骨架屏：灰色块占位 + 呼吸式渐变扫光
+     替代原"正在加载数据..."纯文本,让用户感觉"系统在工作" */
+  .skeleton-block {
+    @apply relative overflow-hidden bg-surface-alt rounded;
+  }
+  .skeleton-block::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    transform: translateX(-100%);
+    animation: skeleton-shimmer 1.4s infinite;
+  }
+  @keyframes skeleton-shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* 屏幕阅读器专用文字(sr-only):视觉隐藏,但读屏软件能念出来
+     用于表格 caption 等给 a11y 工具看的语义信息 */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 }
