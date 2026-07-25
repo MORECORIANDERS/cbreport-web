@@ -183,7 +183,7 @@
       );
     }
     function col(rows) {
-      return '<div class="flex flex-col gap-2 sm:flex-1">' + rows.join("") + "</div>";
+      return '<div class="flex flex-col gap-2 flex-1">' + rows.join("") + "</div>";
     }
 
     // 进度条三段宽度按 up/flat/down 占总家数比例分配
@@ -200,8 +200,8 @@
     return (
       "" +
       '<div class="bg-white border border-surface-border rounded-lg p-4 mobile:p-3">' +
-      // 上段:左右两栏指标
-      '<div class="flex flex-col sm:flex-row gap-4 mobile:gap-2.5">' +
+      // 上段:左右两栏指标(手机端也保持左右平分,不堆叠)
+      '<div class="flex flex-row gap-4 mobile:gap-2.5">' +
       col([
         row("总成交额：", esc(m.totalAmount), "text-brand"),
         row("涨幅前十：", esc(m.top10Gain) + "(" + esc(m.top10GainPct) + ")", "text-brand"),
