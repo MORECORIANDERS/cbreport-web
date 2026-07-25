@@ -10,176 +10,164 @@
     />
     <meta name="theme-color" content="#8250DF" />
     <meta name="color-scheme" content="light" />
-    <!-- CSP:内容安全策略,即使未来引入第三方脚本或被 XSS,也能限制资源加载范围
-     default-src 'self'   默认只允许同源
-     script-src 'self'    JS 只能来自本站(禁止内联 + 外链)
-     style-src  'self' 'unsafe-inline'  CSS 同源,Tailwind 工具类允许内联 style 属性
-     img-src    'self' data:  图片同源 + data URI
-     connect-src 'self'  fetch/XHR 只能请求本站(防止数据外泄) -->
+    <!-- CSP:放开 unpkg.com 用于加载 Petite-Vue
+     script-src 'self' 'unsafe-inline' 允许:CDN + v-scope 模板(模板需要 unsafe-inline 解析) -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"
+      content="default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"
     />
     <link rel="stylesheet" href="styles.css" />
+    <!-- Petite-Vue:Vue 官方迷你版,6KB,零构建
+         用 defer 确保解析完 HTML 再执行 app.js -->
+    <script src="https://unpkg.com/petite-vue@0.4.1" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body class="bg-surface-page text-ink font-sans antialiased leading-relaxed">
     <div
       class="mx-auto max-w-report px-6 pt-[30px] pb-[60px] mobile:px-2.5 mobile:pt-3.5 mobile:pb-8 tiny:px-2 tiny:pt-2.5 tiny:pb-7"
     >
-      <!-- 骨架屏:数据加载完会被 #real-content 取代
-           结构尽量贴近真实页面,让加载->渲染的切换不跳动 -->
-      <div id="app" aria-live="polite" aria-busy="true">
-        <header class="text-center mb-6">
-          <div class="skeleton-block h-9 w-3/4 mx-auto mobile:h-6"></div>
-          <div class="skeleton-block h-3 w-1/2 mx-auto mt-2 mobile:h-2.5"></div>
-          <div class="skeleton-block h-2.5 w-2/3 mx-auto mt-1.5 mobile:h-2"></div>
-        </header>
-        <section class="mb-6">
-          <div class="skeleton-block h-9 w-full mb-1.5"></div>
-          <div class="skeleton-block h-28 w-full"></div>
-        </section>
-        <section class="mb-6">
-          <div class="skeleton-block h-9 w-full mb-1.5"></div>
-          <div class="skeleton-block h-60 w-full"></div>
-        </section>
-        <section class="mb-6">
-          <div class="skeleton-block h-9 w-full mb-1.5"></div>
-          <div class="skeleton-block h-60 w-full"></div>
-        </section>
-      </div>
-
-      <!-- 真实内容骨架:默认 hidden,loadData 成功后 JS 移除 hidden 显示
-           结构上把所有"不变的文案/布局"都写在这里,JS 只填值 -->
-      <div id="real-content" hidden>
-        <!-- 页头:标题/分割线/更新提示都是静态的,只有日期行需要 JS 填值 -->
-        <header class="text-center mb-6 mobile:mb-4">
-          <h1 class="font-script italic font-bold text-brand text-[34px] mobile:text-[21px] tiny:text-[19px]">
-            Study Convertible Bond Everyday
-          </h1>
-          <div class="w-20 h-0.5 bg-brand mx-auto mt-2 mb-1 mobile:w-[60px] mobile:mt-1.5"></div>
-          <div
-            class="flex items-center justify-center gap-2 flex-wrap mt-1 text-sm text-ink-medium mobile:text-xs mobile:gap-1.5"
-          >
-            <!-- JS 填 freshness 标签 -->
-            <span id="freshness"></span>
-            <span>数据日期: <span data-field="tradeDate"></span></span>
-            <span class="text-xs text-ink-light mobile:text-[11px]"
-              >| 页面更新: <span data-field="generateTime"></span
-            ></span>
-          </div>
-          <div class="text-[11px] text-ink-light mt-1 mobile:text-[10px] mobile:mt-[3px]">
-            下次自动更新: 工作日 15:15 (北京时间) | 由 CloudBase 云函数自动生成
-          </div>
-        </header>
-
-        <!-- 市场概况:6 个 stat 卡片 + 进度条骨架都写死,JS 只填值和颜色 -->
-        <section class="mb-6 mobile:mb-4">
-          <div
-            class="flex items-center justify-between h-9 mb-1.5 mobile:min-h-[30px] mobile:mb-1 mobile:flex-wrap mobile:gap-1"
-          >
-            <h2 class="flex items-center gap-2.5 text-xl font-bold text-ink mobile:text-base mobile:gap-1.5">
-              <span class="inline-block w-1 h-7 rounded-sm bg-brand mobile:h-[22px]"></span>
-              市场概况
-            </h2>
-          </div>
-          <div class="bg-white border border-surface-border rounded-lg p-4 mobile:p-3">
-            <!-- 上段:左右两栏 6 个 stat 卡片(每栏 3 个) -->
-            <div class="flex flex-row gap-4 mobile:gap-2.5">
-              <!-- 左栏 -->
-              <div class="flex flex-col gap-3 flex-1 mobile:gap-2.5">
-                <div class="flex flex-col items-center text-center">
-                  <div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">总成交额</div>
-                  <div
-                    class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm text-brand"
-                    data-field="market.totalAmount"
-                  ></div>
-                </div>
-                <div class="flex flex-col items-center text-center">
-                  <div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">涨幅前十</div>
-                  <div
-                    class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm text-brand"
-                    data-field="market.top10Gain"
-                  ></div>
-                  <div class="text-[11px] text-ink-light mobile:text-[10px]" data-field="market.top10GainPct"></div>
-                </div>
-                <div class="flex flex-col items-center text-center">
-                  <div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">涨幅前二十</div>
-                  <div
-                    class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm text-brand"
-                    data-field="market.top20Gain"
-                  ></div>
-                  <div class="text-[11px] text-ink-light mobile:text-[10px]" data-field="market.top20GainPct"></div>
-                </div>
-              </div>
-              <!-- 右栏 -->
-              <div class="flex flex-col gap-3 flex-1 mobile:gap-2.5">
-                <div class="flex flex-col items-center text-center">
-                  <div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">价格中位数</div>
-                  <div
-                    class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm text-brand"
-                    data-field="market.priceMedian"
-                  ></div>
-                </div>
-                <div class="flex flex-col items-center text-center">
-                  <div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">涨幅中位数</div>
-                  <!-- 这个 div 的颜色类由 JS 根据正负切换 -->
-                  <div
-                    class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm"
-                    data-field="market.gainMedian"
-                    data-color-by-sign="true"
-                  ></div>
-                </div>
-                <div class="flex flex-col items-center text-center">
-                  <div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">成交额中位数</div>
-                  <div
-                    class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm text-brand"
-                    data-field="market.amountMedian"
-                  ></div>
-                </div>
-              </div>
-            </div>
-            <!-- 下段:涨跌分布进度条(两端数字 JS 填,三段宽度 JS 算) -->
-            <div class="mt-4 mobile:mt-3 flex items-center gap-2">
-              <span class="font-mono font-bold text-[15px] text-up mobile:text-[13px]" data-field="market.up"></span>
-              <div class="flex-1 flex h-2 rounded overflow-hidden bg-surface-alt" role="img" id="market-bar">
-                <div class="bg-up" data-bar="up"></div>
-                <div class="bg-surface-separator" data-bar="flat"></div>
-                <div class="bg-down" data-bar="down"></div>
-              </div>
-              <span
-                class="font-mono font-bold text-[15px] text-down mobile:text-[13px]"
-                data-field="market.down"
-              ></span>
-            </div>
-          </div>
-        </section>
-
-        <!-- 5 个表格模块:模块标题条写死,表格容器由 JS 填 -->
-        <!-- 占位容器:JS 用 forEach 遍历 [priceDist, industryDist, topGainers, topAmount, topLosers] 填进去 -->
-        <div id="tables-root"></div>
-
-        <footer class="text-center mt-5 text-[11px] text-brand mobile:text-[10px] mobile:mt-3.5">
-          免责声明：本图表来自公开数据源 仅整理供学习研究 不作为投资建议
-        </footer>
-        <div class="text-center mt-2 text-xs text-ink-light mobile:text-[10px]">
-          共 <span data-field="bondCount"></span> 只可转债 | 数据自动更新中
+      <!-- 单一根容器:Petite-Vue 用 v-scope 接管整个区域
+           loading=true 显示骨架屏,loading=false 显示真实内容 -->
+      <div id="app" v-scope="App()" aria-live="polite" :aria-busy="loading">
+        <!-- 骨架屏:v-if="loading" 时显示,数据加载完自动消失 -->
+        <div v-if="loading && !errorMsg">
+          <header class="text-center mb-6">
+            <div class="skeleton-block h-9 w-3/4 mx-auto mobile:h-6"></div>
+            <div class="skeleton-block h-3 w-1/2 mx-auto mt-2 mobile:h-2.5"></div>
+            <div class="skeleton-block h-2.5 w-2/3 mx-auto mt-1.5 mobile:h-2"></div>
+          </header>
+          <section class="mb-6">
+            <div class="skeleton-block h-9 w-full mb-1.5"></div>
+            <div class="skeleton-block h-28 w-full"></div>
+          </section>
+          <section class="mb-6">
+            <div class="skeleton-block h-9 w-full mb-1.5"></div>
+            <div class="skeleton-block h-60 w-full"></div>
+          </section>
+          <section class="mb-6">
+            <div class="skeleton-block h-9 w-full mb-1.5"></div>
+            <div class="skeleton-block h-60 w-full"></div>
+          </section>
         </div>
-      </div>
 
-      <!-- 错误态:loadData 失败时 JS 把 #app 替换成这个内容 -->
-      <template id="tpl-error">
-        <div class="text-center py-10">
-          <div class="text-up text-sm mb-3">数据加载失败: <span data-error-msg></span></div>
+        <!-- 错误态:v-if="errorMsg" 时显示 -->
+        <div v-if="errorMsg" class="text-center py-10">
+          <div class="text-up text-sm mb-3">数据加载失败: {{ errorMsg }}</div>
           <button
-            id="retry-btn"
             type="button"
+            @click="loadData"
             class="inline-block px-4 py-1.5 rounded border border-brand text-brand text-sm font-bold hover:bg-brand hover:text-white transition-colors"
           >
             重试
           </button>
         </div>
-      </template>
+
+        <!-- 真实内容:v-if="!loading && !errorMsg" 时显示 -->
+        <!-- 静态文案/布局直接写在 HTML,{{ }} 填值,:class / :style 控制动态样式 -->
+        <div v-if="!loading && !errorMsg">
+          <!-- 页头 -->
+          <header class="text-center mb-6 mobile:mb-4">
+            <h1 class="font-script italic font-bold text-brand text-[34px] mobile:text-[21px] tiny:text-[19px]">
+              Study Convertible Bond Everyday
+            </h1>
+            <div class="w-20 h-0.5 bg-brand mx-auto mt-2 mb-1 mobile:w-[60px] mobile:mt-1.5"></div>
+            <div
+              class="flex items-center justify-center gap-2 flex-wrap mt-1 text-sm text-ink-medium mobile:text-xs mobile:gap-1.5"
+            >
+              <!-- freshness 标签:用 v-html 渲染带 class 的 span(label 内容是固定枚举,无注入风险) -->
+              <span v-html="freshnessHTML"></span>
+              <span>数据日期: {{ data.tradeDate }}</span>
+              <span class="text-xs text-ink-light mobile:text-[11px]">| 页面更新: {{ data.generateTime }}</span>
+            </div>
+            <div class="text-[11px] text-ink-light mt-1 mobile:text-[10px] mobile:mt-[3px]">
+              下次自动更新: 工作日 15:15 (北京时间) | 由 CloudBase 云函数自动生成
+            </div>
+          </header>
+
+          <!-- 市场概况:6 个 stat 卡片 + 进度条 -->
+          <section class="mb-6 mobile:mb-4">
+            <div
+              class="flex items-center justify-between h-9 mb-1.5 mobile:min-h-[30px] mobile:mb-1 mobile:flex-wrap mobile:gap-1"
+            >
+              <h2 class="flex items-center gap-2.5 text-xl font-bold text-ink mobile:text-base mobile:gap-1.5">
+                <span class="inline-block w-1 h-7 rounded-sm bg-brand mobile:h-[22px]"></span>
+                市场概况
+              </h2>
+            </div>
+            <div class="bg-white border border-surface-border rounded-lg p-4 mobile:p-3">
+              <!-- 上段:6 个 stat 卡片(2x3 网格) -->
+              <div class="flex flex-row gap-4 mobile:gap-2.5">
+                <!-- 左栏:用 v-for 渲染左栏 3 个指标 -->
+                <div class="flex flex-col gap-3 flex-1 mobile:gap-2.5">
+                  <div v-for="stat in leftStats" :key="stat.label" class="flex flex-col items-center text-center">
+                    <div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">{{ stat.label }}</div>
+                    <div
+                      class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm"
+                      :class="stat.valueClass"
+                    >
+                      {{ stat.main }}
+                    </div>
+                    <div v-if="stat.sub" class="text-[11px] text-ink-light mobile:text-[10px]">{{ stat.sub }}</div>
+                  </div>
+                </div>
+                <!-- 右栏 -->
+                <div class="flex flex-col gap-3 flex-1 mobile:gap-2.5">
+                  <div v-for="stat in rightStats" :key="stat.label" class="flex flex-col items-center text-center">
+                    <div class="text-[13px] text-ink mobile:text-[12px] tiny:text-[11px]">{{ stat.label }}</div>
+                    <div
+                      class="font-mono text-[17px] font-bold mobile:text-[15px] tiny:text-sm"
+                      :class="stat.valueClass"
+                    >
+                      {{ stat.main }}
+                    </div>
+                    <div v-if="stat.sub" class="text-[11px] text-ink-light mobile:text-[10px]">{{ stat.sub }}</div>
+                  </div>
+                </div>
+              </div>
+              <!-- 下段:涨跌分布进度条
+                   两端数字用 {{ }} 填,三段宽度用 :style 绑定 -->
+              <div class="mt-4 mobile:mt-3 flex items-center gap-2">
+                <span class="font-mono font-bold text-[15px] text-up mobile:text-[13px]"> {{ data.market.up }} </span>
+                <div
+                  class="flex-1 flex h-2 rounded overflow-hidden bg-surface-alt"
+                  role="img"
+                  :aria-label="barAriaLabel"
+                >
+                  <div class="bg-up" :style="{ width: upPct + '%' }"></div>
+                  <div class="bg-surface-separator" :style="{ width: flatPct + '%' }"></div>
+                  <div class="bg-down" :style="{ width: downPct + '%' }"></div>
+                </div>
+                <span class="font-mono font-bold text-[15px] text-down mobile:text-[13px]">
+                  {{ data.market.down }}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <!-- 5 个表格模块:v-for 遍历配置数组 -->
+          <section v-for="cfg in tableConfigs" :key="cfg.title" class="mb-6 mobile:mb-4">
+            <div
+              class="flex items-center justify-between h-9 mb-1.5 mobile:min-h-[30px] mobile:mb-1 mobile:flex-wrap mobile:gap-1"
+            >
+              <h2 class="flex items-center gap-2.5 text-xl font-bold text-ink mobile:text-base mobile:gap-1.5">
+                <span class="inline-block w-1 h-7 rounded-sm bg-brand mobile:h-[22px]"></span>
+                {{ cfg.title }}
+              </h2>
+              <span v-if="cfg.subtitle" class="text-sm text-ink-medium mobile:text-[11px]"> {{ cfg.subtitle }} </span>
+            </div>
+            <!-- 表格内容:行列数每天变,用 v-html 渲染拼好的 HTML 字符串
+                 (sticky 列、bar 图逻辑复杂,保留字符串拼接更清晰) -->
+            <div v-html="cfg.tableHTML"></div>
+          </section>
+
+          <footer class="text-center mt-5 text-[11px] text-brand mobile:text-[10px] mobile:mt-3.5">
+            免责声明：本图表来自公开数据源 仅整理供学习研究 不作为投资建议
+          </footer>
+          <div class="text-center mt-2 text-xs text-ink-light mobile:text-[10px]">
+            共 {{ data.bondCount }} 只可转债 | 数据自动更新中
+          </div>
+        </div>
+      </div>
     </div>
   </body>
 </html>
