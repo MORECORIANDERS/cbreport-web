@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   可转债日报 - 组件层样式
+   仅放置 Tailwind 工具类难以直接表达的复杂场景
+   ============================================ */
+
+@layer components {
+  /* 表格容器：圆角 + 水平滚动 + 隐藏滚动条 */
+  .table-wrapper {
+    @apply bg-white border border-surface-border rounded-lg overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .table-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+  /* 最后一行去掉底边线，避免与容器边框重叠 */
+  .table-wrapper tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* 数值条形图（涨幅中位数、成交额等可视化条） */
+  .bar-track {
+    @apply absolute bottom-0.5 left-1 right-1 h-1 bg-white rounded-sm overflow-hidden;
+  }
+  .bar-track-bidi {
+    @apply bar-track flex justify-center;
+  }
+  .bar-fill {
+    @apply h-full rounded-sm;
+  }
+  .bar-right {
+    @apply h-full absolute left-1/2 rounded-r-sm;
+  }
+  .bar-left {
+    @apply h-full absolute right-1/2 rounded-l-sm;
+  }
+}
