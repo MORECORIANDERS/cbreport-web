@@ -2,9 +2,16 @@
   'use strict';
 
   // ===== 工具函数 =====
+  // 转义 HTML 特殊字符防 XSS
+  // & 必须最先替换(其他实体里含 &);单引号也补上,防止未来有人写 class='...'
   function esc(s) {
     if (s == null) return '';
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   // 涨跌色：A股惯例红涨绿跌
@@ -18,20 +25,42 @@
 
   // ===== 模板：加载与错误状态 =====
   function errorTpl(msg) {
-    return '<div class="text-center py-10 text-up text-sm">数据加载失败: ' + esc(msg) + '<br>请稍后刷新重试</div>';
+    return '' +
+      '<div class="text-center py-10">' +
+        '<div class="text-up text-sm mb-3">数据加载失败: ' + esc(msg) + '</div>' +
+        '<button id="retry-btn" type="button" ' +
+          'class="inline-block px-4 py-1.5 rounded border border-brand text-brand text-sm font-bold hover:bg-brand hover:text-white transition-colors">' +
+          '重试' +
+        '</button>' +
+      '</div>';
+  }
+
+  // 绑定重试按钮:渲染 errorTpl 后必须调用一次
+  function bindRetry() {
+    var btn = document.getElementById('retry-btn');
+    if (btn) btn.addEventListener('click', loadData);
   }
 
   // ===== 模板：新鲜度标签 =====
+  // 用北京时间(UTC+8)计算日期差,避免海外用户本地时区导致标签错位
   function freshnessTpl(tradeDate) {
-    var now = new Date();
-    var pad = function(n) { return String(n).padStart(2, '0'); };
-    var todayStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
-    var trade = new Date(tradeDate + 'T00:00:00');
-    var today = new Date(todayStr + 'T00:00:00');
-    var dayDiff = Math.round((today - trade) / 86400000);
+    // 把任意 Date 折算成"北京时间当天的 00:00"对应的 UTC 毫秒数
+    // 例如:北京 7-25 00:00 = UTC 7-24 16:00,这一步让两个日期都按北京日历对齐
+    function toBJMidnight(date) {
+      // getUTCHours()+8 等于北京小时数;Math.floor(utcMs/86400000) 拿到当天的 UTC 零点
+      // 这里换算方式:把时间转到北京时区,然后取北京日期的 00:00(等价于 UTC 16:00 前一天)
+      var bjOffset = 8 * 3600 * 1000; // 北京比 UTC 快 8 小时
+      return Math.floor((date.getTime() + bjOffset) / 86400000) * 86400000;
+    }
+    var nowBJ = toBJMidnight(new Date());
+    var trade = toBJMidnight(new Date(tradeDate + 'T00:00:00'));
+    var dayDiff = Math.round((nowBJ - trade) / 86400000);
 
     var label, cls;
-    if (dayDiff === 0) {
+    if (dayDiff < 0) {
+      // 数据日期比今天还晚(云函数时区错位或预告数据),用中性灰提示
+      label = '未来数据'; cls = 'bg-[#e2e3e5] text-[#383d41]';
+    } else if (dayDiff === 0) {
       label = '今日数据'; cls = 'bg-[#d4edda] text-[#155724]';
     } else if (dayDiff === 1) {
       label = '昨日数据'; cls = 'bg-[#fff3cd] text-[#856404]';
@@ -258,19 +287,43 @@
   }
 
   // ===== 入口：加载数据 =====
+  // 8 秒超时,避免服务器挂起导致永久 loading
+  var FETCH_TIMEOUT_MS = 8000;
+  // 用模块级 controller 引用,允许下一次 loadData 时取消上一次未完成的请求
+  var currentAbortController = null;
+
   function loadData() {
+    // 取消上一次未完成的请求(比如用户连续点重试)
+    if (currentAbortController) {
+      try { currentAbortController.abort(); } catch (e) { /* 忽略已完成的 */ }
+    }
+    var controller = new AbortController();
+    currentAbortController = controller;
+    var timer = setTimeout(function() {
+      try { controller.abort(); } catch (e) { /* 忽略 */ }
+    }, FETCH_TIMEOUT_MS);
+
     var url = 'data.json?t=' + Date.now();
-    fetch(url)
+    fetch(url, { signal: controller.signal })
       .then(function(res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
       .then(function(data) {
+        clearTimeout(timer);
+        currentAbortController = null;
         document.title = '可转债日报 - ' + data.tradeDate;
         document.getElementById('app').innerHTML = renderPage(data);
       })
       .catch(function(err) {
-        document.getElementById('app').innerHTML = errorTpl(err.message);
+        clearTimeout(timer);
+        currentAbortController = null;
+        // AbortError 是我们自己触发的超时,给用户更友好的提示
+        var msg = (err && err.name === 'AbortError')
+          ? '请求超时,请检查网络后重试'
+          : (err && err.message) ? err.message : '未知错误';
+        document.getElementById('app').innerHTML = errorTpl(msg);
+        bindRetry();
       });
   }
 
