@@ -462,8 +462,10 @@
       }
     }, FETCH_TIMEOUT_MS);
 
+    // cache: 'no-store' 强制浏览器不走 HTTP 缓存,每次都从服务器拿最新数据
+    // 配合 ?t= 时间戳双保险,彻底避免缓存旧 data.json
     const url = "data.json?t=" + Date.now();
-    fetch(url, { signal: controller.signal })
+    fetch(url, { signal: controller.signal, cache: "no-store" })
       .then(function (res) {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
