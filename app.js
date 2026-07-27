@@ -491,5 +491,12 @@
   }
 
   // ===== 启动 =====
-  document.addEventListener("DOMContentLoaded", loadData);
+  // defer 脚本执行时 DOM 已解析完成,DOMContentLoaded 可能已触发
+  // 用 readyState 判断,避免错过事件导致 loadData 永远不执行
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", loadData);
+  } else {
+    // DOM 已就绪(readyState 是 interactive 或 complete),直接加载
+    loadData();
+  }
 })();
